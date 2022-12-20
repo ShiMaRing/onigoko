@@ -4,7 +4,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"onigoko/data"
 	"onigoko/mynet"
-	"sync"
 )
 
 // Game 实现相关接口，负责游戏的绘制以及输入输出
@@ -13,30 +12,62 @@ import (
 //client接收到游戏消息后，转发至render模块，该模块负责通过消息更新游戏内部状态，
 //game模块接受输入继续处理
 type Game struct {
-	id       int                //房间id号
-	state    int                //房间状态
-	playerId int                //当前游戏的玩家id
-	players  []data.Player      //当前游戏的玩家状态列表
-	graph    [][]*Piece         //游戏地图
-	client   mynet.Communicator //通信
+	state        State              //当前的游戏状态，可能为游戏状态，主菜单状态，进入房间状态
+	Options      data.Options       //游戏设置
+	communicator mynet.Communicator //通信客户端
 }
 
-type Piece struct {
-	mu    sync.RWMutex      //读写锁，避免竞态
-	block *data.Block       //内部维护的状态
-	image *data.CustomImage //内部维护的图
-}
+var ScreenWidth = data.GraphWith*int(data.PIXEL) + 40
+var ScreenHeight = data.GraphHeight*int(data.PIXEL) + 40
 
-func (g Game) Update() error {
-	//消息更新
+func (g *Game) Init() error {
+	data.LoadData()
+	ebiten.SetScreenFilterEnabled(false)
+	ebiten.SetWindowSize(data.GraphWith*int(data.PIXEL)+40, data.GraphHeight*int(data.PIXEL)+40)
+	ebiten.SetWindowTitle("Onigoko  ——created by Gaosong Xu")
+	g.communicator = &mynet.Client{}
+	if err := g.SetState(&MenuState{
+		game: g,
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (g Game) Draw(screen *ebiten.Image) {
-	//TODO implement me
-	panic("implement me")
+func (g *Game) SetState(s State) error {
+	if g.state != nil {
+		//清空游戏状态
+		if err := s.Dispose(); err != nil {
+			panic(err)
+		}
+	}
+	//初始化
+	if err := s.Init(); err != nil {
+		panic(err)
+	}
+	g.state = s
+	return nil
 }
 
-func (g Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (g *Game) Dispose() error {
+	return nil
+}
+
+func (g *Game) Update() error {
+	return g.state.Update()
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.state.Draw(screen)
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return data.GraphWith*int(data.PIXEL) + 40, data.GraphHeight*int(data.PIXEL) + 40
+}
+
+type NoError struct {
+}
+
+func (e NoError) Error() string {
+	return "no error here captain"
 }

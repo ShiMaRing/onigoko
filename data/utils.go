@@ -68,7 +68,7 @@ func generateImage(imageName string) *CustomImage {
 	}
 }
 
-func GetImage(imageName string) *CustomImage {
+func GetImageByName(imageName string) *CustomImage {
 	if img, ok := imageFactory.maps[imageName]; ok {
 		return img
 	} else {
