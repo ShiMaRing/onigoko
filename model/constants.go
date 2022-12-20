@@ -38,3 +38,5 @@ const RECOVER_FROM_DIZZINESS = 56
 const UPDATE = 57
 const GAME_START = 58
 const GAME_END = 59
+
+const PIXEL float64 = 16 //一个格子像素大小
