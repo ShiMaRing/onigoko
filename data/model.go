@@ -1,4 +1,4 @@
-package model
+package data
 
 // Player 玩家结构体，与后端对应
 type Player struct {

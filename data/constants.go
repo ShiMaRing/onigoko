@@ -1,4 +1,4 @@
-package model
+package data
 
 const HUMAN = 0
 const GHOST = 1

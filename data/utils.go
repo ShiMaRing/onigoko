@@ -1,11 +1,10 @@
-package main
+package data
 
 import (
 	"bytes"
 	"github.com/hajimehoshi/ebiten/v2"
 	"image/png"
 	"log"
-	"onigoko/model"
 )
 
 type ImageFactory struct {
@@ -61,8 +60,8 @@ func generateImage(imageName string) *CustomImage {
 	image := ebiten.NewImageFromImage(img)
 	op := &ebiten.DrawImageOptions{}
 	width, height := image.Size()
-	scaleX := model.PIXEL / float64(width)
-	scaleY := model.PIXEL / float64(height)
+	scaleX := PIXEL / float64(width)
+	scaleY := PIXEL / float64(height)
 	op.GeoM.Scale(scaleX, scaleY)
 	return &CustomImage{
 		image, op,

@@ -1,8 +1,9 @@
-package main
+package game
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"onigoko/model"
+	"onigoko/data"
+	"onigoko/mynet"
 	"sync"
 )
 
@@ -12,22 +13,23 @@ import (
 //client接收到游戏消息后，转发至render模块，该模块负责通过消息更新游戏内部状态，
 //game模块接受输入继续处理
 type Game struct {
-	id       int            //房间id号
-	state    int            //房间状态
-	playerId int            //当前游戏的玩家id
-	players  []model.Player //当前游戏的玩家状态列表
-	graph    [][]*Piece     //游戏地图
+	id       int                //房间id号
+	state    int                //房间状态
+	playerId int                //当前游戏的玩家id
+	players  []data.Player      //当前游戏的玩家状态列表
+	graph    [][]*Piece         //游戏地图
+	client   mynet.Communicator //通信
 }
 
 type Piece struct {
-	mu    sync.RWMutex  //读写锁，避免竞态
-	block *model.Block  //内部维护的状态
-	image *ebiten.Image //复用的image
+	mu    sync.RWMutex      //读写锁，避免竞态
+	block *data.Block       //内部维护的状态
+	image *data.CustomImage //内部维护的图
 }
 
 func (g Game) Update() error {
-	//TODO implement me
-	panic("implement me")
+	//消息更新
+	return nil
 }
 
 func (g Game) Draw(screen *ebiten.Image) {
@@ -36,6 +38,5 @@ func (g Game) Draw(screen *ebiten.Image) {
 }
 
 func (g Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	//TODO implement me
-	panic("implement me")
+	return data.GraphWith*int(data.PIXEL) + 40, data.GraphHeight*int(data.PIXEL) + 40
 }

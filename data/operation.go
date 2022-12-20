@@ -1,4 +1,4 @@
-package model
+package data
 
 // Operation 前后端传输的消息体
 type Operation struct {
