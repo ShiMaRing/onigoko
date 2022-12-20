@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"log"
 	"onigoko/data"
 	"onigoko/mynet"
 )
@@ -25,7 +26,16 @@ func (g *Game) Init() error {
 	ebiten.SetScreenFilterEnabled(false)
 	ebiten.SetWindowSize(data.GraphWith*int(data.PIXEL)+40, data.GraphHeight*int(data.PIXEL)+40)
 	ebiten.SetWindowTitle("Onigoko  ——created by Gaosong Xu")
-	g.communicator = &mynet.Client{}
+	//构建通信器，使用接口，协助mock测试
+	g.communicator = mynet.NewFakeClient()
+
+	//启动通信
+	go func() {
+		if err := g.communicator.Run(); err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
 	if err := g.SetState(&MenuState{
 		game: g,
 	}); err != nil {

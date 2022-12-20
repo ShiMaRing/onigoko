@@ -1,7 +1,9 @@
 package game
 
 import (
+	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
+	"image/color"
 	"onigoko/data"
 )
 
@@ -10,12 +12,42 @@ type RoomState struct {
 	game                *Game
 	currentPlayerNumber int            //当前的玩家数量
 	buttons             []*data.Button //按钮，返回按钮
+	roomId              int
+	playerId            int
+	receivedMessage     chan data.Operation
 }
 
 // Init 等待房间，只需要显示当前的人数，以及退出房间按钮
 func (r *RoomState) Init() error {
-	//初始化
-
+	//绘制界面
+	//初始化，申请加入游戏
+	operation := data.Operation{}
+	operation.OperationType = data.JOIN_ROOM //申请加入房间,可能携带房间号
+	communicator := r.game.communicator
+	communicator.SendMessage(operation) //发送消息，申请加入，之后在update阶段对响应进行判断
+	r.receivedMessage = communicator.ReceivedMessage()
+	x := ScreenWidth / 2
+	y := int(float64(ScreenHeight)/3) + 40
+	goBackButton := data.NewButton(
+		x,
+		y,
+		"go back",
+		func() {
+			//发送退出消息
+			op := data.Operation{}
+			op.OperationType = data.LEAVE_ROOM //离开房间
+			op.RoomId = r.roomId               //发送房间号
+			op.PlayerId = r.playerId           //携带玩家号
+			communicator.SendMessage(operation)
+			r.game.SetState(&MenuState{
+				game: r.game,
+			})
+		},
+	)
+	goBackButton.Hover = true
+	r.buttons = []*data.Button{
+		goBackButton,
+	}
 	return nil
 }
 
@@ -24,11 +56,42 @@ func (r *RoomState) Dispose() error {
 }
 
 func (r *RoomState) Update() error {
-
+	//不断读取消息
+	for _, button := range r.buttons {
+		button.Update()
+	}
+	select {
+	case operation := <-r.receivedMessage:
+		switch operation.OperationType {
+		//检查消息类型
+		case data.GAME_START:
+		//游戏开始准备
+		case data.JOIN_ROOM:
+			//玩家加入
+			r.currentPlayerNumber++
+		case data.LEAVE_ROOM:
+			//玩家离开
+			r.currentPlayerNumber--
+		case data.JOIN_SUCCESS:
+			r.roomId = operation.RoomId
+			r.playerId = operation.PlayerId
+			r.currentPlayerNumber = len(operation.Player)
+		}
+	default:
+		return nil
+	}
 	return nil
 }
 
 func (r *RoomState) Draw(screen *ebiten.Image) {
-
+	screen.Fill(color.Black)
+	x := ScreenWidth / 2
+	y := int(float64(ScreenHeight) / 3)
+	text := fmt.Sprintf("current user count: %d", r.currentPlayerNumber)
+	data.DrawStaticText(text, data.NormalFace, x, y, color.White, screen, true)
+	// Draw game buttons
+	for _, button := range r.buttons {
+		button.Draw(screen, &ebiten.DrawImageOptions{})
+	}
 	return
 }

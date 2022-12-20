@@ -32,7 +32,7 @@ func NewDefaultClient() *Client {
 	}
 }
 
-func (c *Client) Dial() error {
+func (c *Client) dial() error {
 	dialer := websocket.Dialer{}
 	//向服务器发送连接请求，websocket 统一使用 ws://，默认端口和http一样都是80
 	conn, _, err := dialer.Dial(fmt.Sprintf("%s:%d", c.serverIp, c.serverPort), nil)
@@ -49,27 +49,32 @@ func (c *Client) SendMessage(operation data.Operation) {
 	return
 }
 
-func (c *Client) receiveMessage() (err error) {
+func (c *Client) receiveMessage() error {
 	defer c.conn.Close()
+	var err error
 	for {
 		op := data.Operation{}
-		messageType, p, err := c.conn.ReadMessage()
+		messageType, p, innerErr := c.conn.ReadMessage()
 		if messageType != websocket.TextMessage {
 			continue //不处理文本消息以外的消息
 		}
-		if err != nil {
-			return
+		if innerErr != nil {
+			return err
 		}
-		err = json.Unmarshal(p, op)
+		err = json.Unmarshal(p, &op)
 		if err != nil {
 			log.Fatalln("json unmarshal fail:", err)
-			return
 		}
 		c.received <- op //将消息置入消费池
 	}
+	return nil
 }
 
 func (c *Client) Run() error {
+	err := c.dial()
+	if err != nil {
+		return err
+	}
 	go func() {
 		for {
 			select {

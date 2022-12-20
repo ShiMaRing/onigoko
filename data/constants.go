@@ -39,4 +39,11 @@ const UPDATE = 57
 const GAME_START = 58
 const GAME_END = 59
 
+const LEAVE_ROOM = 60
+const HEART_BEAT = 61
+const JOIN_FAIL = 62
+
+//加入成功
+const JOIN_SUCCESS = 63
+
 const PIXEL float64 = 16 //一个格子像素大小
