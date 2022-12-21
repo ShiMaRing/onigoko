@@ -12,8 +12,8 @@ type ImageFactory struct {
 }
 
 type CustomImage struct {
-	image  *ebiten.Image
-	option *ebiten.DrawImageOptions
+	Image  *ebiten.Image
+	Option *ebiten.DrawImageOptions
 }
 
 var imageFactory *ImageFactory

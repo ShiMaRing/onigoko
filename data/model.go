@@ -4,6 +4,8 @@ package data
 type Player struct {
 	Id          uint32 `json:"id,omitempty"`       //玩家id，唯一标识玩家，room-id + player-id
 	Identity    int    `json:"identity,omitempty"` //当前玩家是人还是鬼
+	NickName    string `json:"nickName"`           //当前玩家的局内名称，ghost,p1,p2,p3
+	Direct      int    `json:"direct"`             //当前玩家的朝向
 	X           int    `json:"x,omitempty"`
 	Y           int    `json:"y,omitempty"`           //当前人的位置或者鬼的位置，在某一具体格子上
 	Mines       int    `json:"mines,omitempty"`       //人当前的地雷数量

@@ -46,3 +46,8 @@ const JOIN_FAIL = 62
 const JOIN_SUCCESS = 63
 
 const PIXEL float64 = 16 //一个格子像素大小
+
+const Ghost = "ghost"
+const P1 = "p1"
+const P2 = "p2"
+const P3 = "p3"

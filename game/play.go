@@ -4,14 +4,13 @@ import (
 	"context"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"math"
 	"onigoko/data"
 	"onigoko/mynet"
-	"sync"
 	"time"
 )
 
 type Piece struct {
-	mu    sync.RWMutex      //读写锁，避免竞态
 	block data.Block        //内部维护的状态
 	image *data.CustomImage //内部维护的图
 }
@@ -21,7 +20,6 @@ type PlayState struct {
 	roomId     int                    //房间id号
 	playerId   uint32                 //当前游戏的玩家id
 	players    map[uint32]data.Player //当前游戏的玩家状态列表
-	direct     int                    //当前玩家朝向
 	graph      [][]*Piece             //游戏地图
 	client     mynet.Communicator     //通信器
 	ctx        context.Context
@@ -56,7 +54,6 @@ func (p *PlayState) Init() error {
 		p.graph[i] = make([]*Piece, data.GraphWith)
 		for j := range p.graph[i] {
 			p.graph[i][j] = &Piece{
-				mu:    sync.RWMutex{},
 				block: data.Block{},
 				image: nil,
 			}
@@ -150,28 +147,24 @@ func (p *PlayState) Update() error {
 				//允许移动
 				p.count = 0
 				communicator.SendMessage(p.CreateOperation(data.LEFT))
-				p.direct = data.LEFT
 			}
 		case ebiten.KeyW:
 			if p.count >= p.threshold {
 				//允许移动
 				p.count = 0
 				communicator.SendMessage(p.CreateOperation(data.UP))
-				p.direct = data.UP
 			}
 		case ebiten.KeyS:
 			if p.count >= p.threshold {
 				//允许移动
 				p.count = 0
 				communicator.SendMessage(p.CreateOperation(data.DOWN))
-				p.direct = data.DOWN
 			}
 		case ebiten.KeyD:
 			if p.count >= p.threshold {
 				//允许移动
 				p.count = 0
 				communicator.SendMessage(p.CreateOperation(data.RIGHT))
-				p.direct = data.RIGHT
 			}
 		}
 	}
@@ -223,5 +216,54 @@ func (p *PlayState) CreateOperation(opType int) data.Operation {
 
 // Draw 渲染
 func (p *PlayState) Draw(screen *ebiten.Image) {
+	//渲染三部分，当前玩家状态栏，剩余照明次数，存活状态，游戏地图，各个玩家位置状态
+	//绘制地图,视野外的地方需要填充为黑暗，暂时不需要实现
+	playerLocal := p.players[p.playerId]
+	for i := range p.graph {
+		for j := range p.graph[i] {
+			//绘制图块
+			customImage := p.graph[i][j].image
+			x := float64(i) * data.PIXEL
+			y := float64(j) * data.PIXEL
+			option := customImage.Option
+			option.GeoM.Translate(x, y)
+			//如果当前玩家为鬼的话，不绘制地雷
+			if playerLocal.Identity == data.GHOST && p.graph[i][j].block.BlockType == data.MINE {
+				continue
+			}
+			screen.DrawImage(customImage.Image, option)
+		}
+	}
+	//绘制玩家,根据玩家的nickName 选择玩家image
+	for _, player := range p.players {
+		if player.IsEscaped || player.IsDead {
+			continue //不需要绘制
+		}
+		//检查玩家状态
+		customImage := data.GetImageByName(player.NickName)
+		dir := player.Direct
+		option := customImage.Option
+		switch dir {
+		case data.DOWN:
+		case data.UP:
+			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
+			option.GeoM.Rotate(math.Pi)
+			option.GeoM.Translate(data.PIXEL*float64(player.X), data.PIXEL*float64(player.Y))
+		case data.LEFT:
+			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
+			option.GeoM.Rotate(math.Pi / 2)
+			option.GeoM.Translate(data.PIXEL*float64(player.X), data.PIXEL*float64(player.Y))
+		case data.RIGHT:
+			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
+			option.GeoM.Rotate(-math.Pi / 2)
+			option.GeoM.Translate(data.PIXEL*float64(player.X), data.PIXEL*float64(player.Y))
+		}
+		screen.DrawImage(customImage.Image, option)
+		//检查是否需要套笼子
+		if player.Identity == data.GHOST && player.IsDizziness {
+			cageImage := data.GetImageByName("cage")
+			screen.DrawImage(cageImage.Image, cageImage.Option)
+		}
+	}
 
 }
