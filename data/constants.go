@@ -30,7 +30,6 @@ const GAME_ENDED = 2
 
 const CREATE_ROOM = 50
 const JOIN_ROOM = 51
-const MOVE = 52
 const PLACE_MINE = 53
 const OPEN_LIGHT = 54
 const CLOSE_LIGHT = 55

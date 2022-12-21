@@ -25,6 +25,10 @@ func (f *FakeClient) SendMessage(operation data.Operation) {
 			PlayerId:      1,
 			RoomId:        1,
 		}
+	case data.HEART_BEAT:
+		//不做处理
+		return
+
 	}
 
 }

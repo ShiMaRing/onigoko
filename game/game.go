@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/google/uuid"
 	"github.com/hajimehoshi/ebiten/v2"
 	"log"
 	"onigoko/data"
@@ -16,6 +17,7 @@ type Game struct {
 	state        State              //当前的游戏状态，可能为游戏状态，主菜单状态，进入房间状态
 	Options      data.Options       //游戏设置
 	communicator mynet.Communicator //通信客户端
+	PlayerId     uint32
 }
 
 var ScreenWidth = data.GraphWith*int(data.PIXEL) + 40
@@ -29,7 +31,8 @@ func (g *Game) Init() error {
 	//构建通信器，使用接口，协助mock测试
 	g.communicator = mynet.NewFakeClient()
 
-	//启动通信
+	id := uuid.New().ID() //启动通信
+	g.PlayerId = id
 	go func() {
 		if err := g.communicator.Run(); err != nil {
 			log.Fatalln(err)
