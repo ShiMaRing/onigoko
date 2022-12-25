@@ -9,6 +9,8 @@ type Communicator interface {
 	// SendMessage 向服务端发送消息
 	SendMessage(operation data.Operation)
 
+	sendMessage() error
+
 	// ReceiveMessage 持续接受消息并且通过chan传递给render
 	receiveMessage() error
 

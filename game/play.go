@@ -219,19 +219,27 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 	//渲染三部分，当前玩家状态栏，剩余照明次数，存活状态，游戏地图，各个玩家位置状态
 	//绘制地图,视野外的地方需要填充为黑暗，暂时不需要实现
 	playerLocal := p.players[p.playerId]
+	roadImage := data.GetImageByName("road")
 	for i := range p.graph {
 		for j := range p.graph[i] {
 			//绘制图块
 			customImage := p.graph[i][j].image
+			block := p.graph[i][j].block
 			x := float64(i) * data.PIXEL
 			y := float64(j) * data.PIXEL
-			option := customImage.Option
+			//不应该直接修改指针指向的地址
+			option := *customImage.Option
 			option.GeoM.Translate(x, y)
 			//如果当前玩家为鬼的话，不绘制地雷
 			if playerLocal.Identity == data.GHOST && p.graph[i][j].block.BlockType == data.MINE {
 				continue
 			}
-			screen.DrawImage(customImage.Image, option)
+			if block.BlockType == data.KEY || block.BlockType == data.MINE {
+				op := *roadImage.Option
+				op.GeoM.Translate(x, y)
+				screen.DrawImage(roadImage.Image, &op)
+			}
+			screen.DrawImage(customImage.Image, &option)
 		}
 	}
 	//绘制玩家,根据玩家的nickName 选择玩家image
@@ -239,7 +247,7 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 		if player.IsEscaped || player.IsDead {
 			continue //不需要绘制
 		}
-		//检查玩家状态
+		//检查玩家状态,玩家可以直接修改指针，因为要复用
 		customImage := data.GetImageByName(player.NickName)
 		dir := player.Direct
 		option := customImage.Option

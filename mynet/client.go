@@ -17,6 +17,10 @@ type Client struct {
 	serverPort int
 }
 
+func (c *Client) sendMessage() error {
+	return nil
+}
+
 func (c *Client) ReceivedMessage() chan data.Operation {
 	return c.received
 }

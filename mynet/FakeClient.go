@@ -8,6 +8,10 @@ type FakeClient struct {
 	receivedChan chan data.Operation
 }
 
+func (f *FakeClient) sendMessage() error {
+	return nil
+}
+
 func NewFakeClient() *FakeClient {
 	return &FakeClient{
 		receivedChan: make(chan data.Operation, 10),
