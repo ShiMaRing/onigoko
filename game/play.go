@@ -2,11 +2,13 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"math"
+	"image/color"
 	"onigoko/data"
 	"onigoko/mynet"
+	"strings"
 	"time"
 )
 
@@ -29,11 +31,21 @@ type PlayState struct {
 	received   chan data.Operation
 	count      int
 	threshold  int
-}
+	notify     []string //通知，显示系统的消息
+	stateInfo  []string //状态信息，显示所有的玩家状态,只有玩家有 格式
+} // Light: 3  (press Q)
+// Trap:  1  (press E)
+
+// P1:Alive  <-you
+// P2:Dead
+// P3:Escaped
+
+// P1 is killed by Ghost
 
 func (p *PlayState) Init() error {
 	//初始化,心跳发送
 	data.GetImageFlyweightFactory()
+	p.notify = make([]string, 0)
 	p.ctx, p.cancelFunc = context.WithCancel(context.Background())
 	p.keys = make([]ebiten.Key, 10)
 	p.graph = make([][]*Piece, data.GraphHeight)
@@ -54,6 +66,21 @@ func (p *PlayState) Init() error {
 	} else {
 		p.threshold = 20
 	}
+	//初始化信息列表
+	p.stateInfo = make([]string, 0)
+	//根据玩家身份确定是否需要显示状态信息
+	p.stateInfo = append(p.stateInfo, fmt.Sprintf("You Are %s", strings.ToTitle(player.NickName)))
+	if player.Identity == data.HUMAN {
+		p.stateInfo = append(p.stateInfo, "Light: 3  (press Q)")
+		p.stateInfo = append(p.stateInfo, "Trap:  1  (press E)")
+		p.stateInfo = append(p.stateInfo, "")
+	}
+	p.stateInfo = append(p.stateInfo, "P1: Alive")
+	p.stateInfo = append(p.stateInfo, "P2: Alive")
+	p.stateInfo = append(p.stateInfo, "P3: Alive")
+	p.stateInfo = append(p.stateInfo, "")
+	p.stateInfo = append(p.stateInfo, "Notices:")
+
 	return nil
 }
 
@@ -189,6 +216,7 @@ func (p *PlayState) Update() error {
 			//后端要求更新游戏状态
 			p.UpdatePlayer(message.Players)
 			p.UpdateWorldBlocks(message.Blocks)
+			p.UpdateOther(message)
 		case data.GAME_END:
 			//游戏结束，弹窗，退出游戏，暂时不需要实现
 		}
@@ -224,7 +252,9 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 			option.GeoM.Translate(x, y)
 			//如果当前玩家为鬼的话，不绘制地雷
 			if playerLocal.Identity == data.GHOST && p.graph[i][j].block.BlockType == data.MINE {
-				continue
+				op := roadImage.Option
+				op.GeoM.Translate(x, y)
+				screen.DrawImage(roadImage.Image, &op)
 			}
 			if block.BlockType == data.KEY || block.BlockType == data.MINE {
 				op := roadImage.Option
@@ -241,30 +271,96 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 		}
 		//检查玩家状态,玩家可以直接修改指针，因为要复用
 		customImage := data.GetImageByName(player.NickName)
-		println("draw player: ", player.NickName)
-		dir := player.Direct
 		option := customImage.Option
-		switch dir {
-		case data.DOWN:
-			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
-		case data.UP:
-			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
-			option.GeoM.Rotate(math.Pi)
-			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
-		case data.LEFT:
-			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
-			option.GeoM.Rotate(math.Pi / 2)
-			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
-		case data.RIGHT:
-			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
-			option.GeoM.Rotate(-math.Pi / 2)
-			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
-		}
+		option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
 		screen.DrawImage(customImage.Image, &option)
 		//检查是否需要套笼子
 		if player.Identity == data.GHOST && player.IsDizziness {
 			cageImage := data.GetImageByName("cage")
+			cageImage.Option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
 			screen.DrawImage(cageImage.Image, &cageImage.Option)
+		}
+	}
+	var x = data.GraphWith*int(data.PIXEL) + 10
+	var y = 30
+	for i := range p.stateInfo {
+		data.DrawStaticText(
+			p.stateInfo[i],
+			data.BoldFace,
+			x,
+			y,
+			color.White,
+			screen,
+			false,
+		)
+		y += 25
+	}
+	for i := range p.notify {
+		data.DrawStaticText(
+			p.notify[i],
+			data.BoldFace,
+			x,
+			y,
+			color.White,
+			screen,
+			false,
+		)
+		y += 25
+	}
+}
+
+//UpdateOther	 这里做一些清理或者辅助工作
+func (p *PlayState) UpdateOther(message data.Operation) {
+	//如果鬼被晕眩，需要延时发送晕眩解除
+	for i := range message.Players {
+		if message.Players[i].Identity == data.GHOST && message.Players[i].IsDizziness {
+			go func() {
+				time.Sleep(3 * time.Second)
+				p.game.communicator.SendMessage(p.CreateOperation(data.RECOVER_FROM_DIZZINESS))
+			}()
+			break
+		}
+	}
+	//更新一下Notify,Notify是一个队列，每次只显示最新的5条,
+	if message.Message != "" { //如果有消息
+		p.notify = append(p.notify, message.Message)
+		if len(p.notify) > 5 {
+			p.notify = p.notify[1:]
+		}
+	}
+	player := p.players[p.playerId]
+	//更新一下玩家的状态栏
+	for i := range message.Players {
+		tmp := message.Players[i]
+		if tmp.Id == p.playerId && player.Identity == data.HUMAN {
+			//需要更新一下Light 和 Trap
+			p.stateInfo[1] = fmt.Sprintf("Light: %d  (press Q)", tmp.Lights)
+			p.stateInfo[2] = fmt.Sprintf("Trap:  %d  (press E)", tmp.Mines)
+			break
+		}
+	}
+	base := len(p.stateInfo) - 5
+	for i := range message.Players {
+		tmp := message.Players[i]
+		if tmp.IsEscaped {
+			switch tmp.NickName {
+			case "p1":
+				p.stateInfo[base] = "P1 Escaped"
+			case "p2":
+				p.stateInfo[base+1] = "P2 Escaped"
+			case "p3":
+				p.stateInfo[base+2] = "P3 Escaped"
+			}
+		}
+		if tmp.IsDead {
+			switch tmp.NickName {
+			case "p1":
+				p.stateInfo[base] = "P1 Dead"
+			case "p2":
+				p.stateInfo[base+1] = "P2 Dead"
+			case "p3":
+				p.stateInfo[base+2] = "P3 Dead"
+			}
 		}
 	}
 

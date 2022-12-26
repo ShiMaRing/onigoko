@@ -20,8 +20,8 @@ type Game struct {
 	PlayerId     uint32
 }
 
-var ScreenWidth = data.GraphWith*int(data.PIXEL) + 40
-var ScreenHeight = data.GraphHeight*int(data.PIXEL) + 40
+var ScreenWidth = data.GraphWith*int(data.PIXEL) + 200
+var ScreenHeight = data.GraphHeight*int(data.PIXEL) + 20
 
 func (g *Game) Init() error {
 	data.LoadData()
@@ -75,7 +75,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return data.GraphWith*int(data.PIXEL) + 40, data.GraphHeight*int(data.PIXEL) + 40
+	return data.GraphWith*int(data.PIXEL) + 200, data.GraphHeight*int(data.PIXEL) + 20
 }
 
 type NoError struct {

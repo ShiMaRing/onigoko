@@ -54,12 +54,6 @@ func (r *RoomState) Init() error {
 }
 
 func (r *RoomState) Dispose() error {
-	//发送退出消息
-	op := data.Operation{}
-	op.OperationType = data.LEAVE_ROOM //离开房间
-	op.PlayerId = r.game.PlayerId
-	op.RoomId = r.roomId //发送房间号
-	r.game.communicator.SendMessage(op)
 	r.cancelFunc()
 	return nil
 }

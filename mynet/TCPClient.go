@@ -68,13 +68,10 @@ func (t *TCPClient) ReceiveMessage() error {
 			break
 		}
 	}
+	//log here
+	fmt.Println("接收到的消息：", string(result))
 	var op data.Operation
 	err = json.Unmarshal(result[:count], &op)
-
-	tmp := op
-	tmp.Blocks = nil
-	marshal, _ := json.Marshal(tmp)
-	fmt.Println("接收消息：", string(marshal))
 
 	if err != nil {
 		log.Fatalln("Unmarshal", err)
