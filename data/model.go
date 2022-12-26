@@ -18,8 +18,8 @@ type Player struct {
 
 // Block 表示每一个块数据
 type Block struct {
-	BlockType int `json:"blockType,omitempty"` //方块种类
-	PlayerId  int `json:"playerId,omitempty"`  //若玩家存在，则需要表示玩家的id
+	BlockType int `json:"blockType"` //方块种类
+	PlayerId  int `json:"playerId"`  //若玩家存在，则需要表示玩家的id
 	X         int `json:"x"`
 	Y         int `json:"y"`
 }

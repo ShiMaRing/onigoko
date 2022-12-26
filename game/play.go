@@ -33,22 +33,9 @@ type PlayState struct {
 
 func (p *PlayState) Init() error {
 	//初始化,心跳发送
-	tick := time.NewTicker(2 * time.Second)
+	data.GetImageFlyweightFactory()
 	p.ctx, p.cancelFunc = context.WithCancel(context.Background())
 	p.keys = make([]ebiten.Key, 10)
-	go func() {
-		for true {
-			select {
-			case <-tick.C:
-				op := data.Operation{}
-				op.OperationType = data.HEART_BEAT
-				op.PlayerId = p.game.PlayerId
-			case <-p.ctx.Done():
-				tick.Stop()
-				return
-			}
-		}
-	}()
 	p.graph = make([][]*Piece, data.GraphHeight)
 	for i := range p.graph {
 		p.graph[i] = make([]*Piece, data.GraphWith)
@@ -73,7 +60,12 @@ func (p *PlayState) Init() error {
 func (p *PlayState) UpdateWorldBlocks(blocks []data.Block) {
 	for i := range blocks {
 		block := blocks[i]
-		p.graph[block.X][block.Y].block = block //指向block
+		X := block.X
+		Y := block.Y
+		p.graph[X][Y].block.BlockType = block.BlockType
+		p.graph[X][Y].block.X = block.X
+		p.graph[X][Y].block.Y = block.Y
+		p.graph[X][Y].block.PlayerId = block.PlayerId
 		//更新视图
 		switch block.BlockType {
 		case data.ROAD:
@@ -195,7 +187,7 @@ func (p *PlayState) Update() error {
 		switch message.OperationType {
 		case data.UPDATE:
 			//后端要求更新游戏状态
-			p.UpdatePlayer(message.Player)
+			p.UpdatePlayer(message.Players)
 			p.UpdateWorldBlocks(message.Blocks)
 		case data.GAME_END:
 			//游戏结束，弹窗，退出游戏，暂时不需要实现
@@ -225,17 +217,17 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 			//绘制图块
 			customImage := p.graph[i][j].image
 			block := p.graph[i][j].block
-			x := float64(i) * data.PIXEL
-			y := float64(j) * data.PIXEL
+			x := float64(j) * data.PIXEL
+			y := float64(i) * data.PIXEL
 			//不应该直接修改指针指向的地址
-			option := *customImage.Option
+			option := customImage.Option
 			option.GeoM.Translate(x, y)
 			//如果当前玩家为鬼的话，不绘制地雷
 			if playerLocal.Identity == data.GHOST && p.graph[i][j].block.BlockType == data.MINE {
 				continue
 			}
 			if block.BlockType == data.KEY || block.BlockType == data.MINE {
-				op := *roadImage.Option
+				op := roadImage.Option
 				op.GeoM.Translate(x, y)
 				screen.DrawImage(roadImage.Image, &op)
 			}
@@ -249,28 +241,30 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 		}
 		//检查玩家状态,玩家可以直接修改指针，因为要复用
 		customImage := data.GetImageByName(player.NickName)
+		println("draw player: ", player.NickName)
 		dir := player.Direct
 		option := customImage.Option
 		switch dir {
 		case data.DOWN:
+			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
 		case data.UP:
 			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
 			option.GeoM.Rotate(math.Pi)
-			option.GeoM.Translate(data.PIXEL*float64(player.X), data.PIXEL*float64(player.Y))
+			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
 		case data.LEFT:
 			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
 			option.GeoM.Rotate(math.Pi / 2)
-			option.GeoM.Translate(data.PIXEL*float64(player.X), data.PIXEL*float64(player.Y))
+			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
 		case data.RIGHT:
 			option.GeoM.Translate(-float64(customImage.Image.Bounds().Dx())/2, -float64(customImage.Image.Bounds().Dy())/2)
 			option.GeoM.Rotate(-math.Pi / 2)
-			option.GeoM.Translate(data.PIXEL*float64(player.X), data.PIXEL*float64(player.Y))
+			option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
 		}
-		screen.DrawImage(customImage.Image, option)
+		screen.DrawImage(customImage.Image, &option)
 		//检查是否需要套笼子
 		if player.Identity == data.GHOST && player.IsDizziness {
 			cageImage := data.GetImageByName("cage")
-			screen.DrawImage(cageImage.Image, cageImage.Option)
+			screen.DrawImage(cageImage.Image, &cageImage.Option)
 		}
 	}
 

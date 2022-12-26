@@ -13,7 +13,7 @@ type ImageFactory struct {
 
 type CustomImage struct {
 	Image  *ebiten.Image
-	Option *ebiten.DrawImageOptions
+	Option ebiten.DrawImageOptions
 }
 
 var imageFactory *ImageFactory
@@ -58,7 +58,7 @@ func generateImage(imageName string) *CustomImage {
 		log.Fatalln(err)
 	}
 	image := ebiten.NewImageFromImage(img)
-	op := &ebiten.DrawImageOptions{}
+	op := ebiten.DrawImageOptions{}
 	width, height := image.Size()
 	scaleX := PIXEL / float64(width)
 	scaleY := PIXEL / float64(height)

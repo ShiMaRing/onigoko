@@ -29,7 +29,7 @@ func (g *Game) Init() error {
 	ebiten.SetWindowSize(data.GraphWith*int(data.PIXEL)+40, data.GraphHeight*int(data.PIXEL)+40)
 	ebiten.SetWindowTitle("Onigoko  ——created by Gaosong Xu")
 	//构建通信器，使用接口，协助mock测试
-	g.communicator = mynet.NewFakeClient()
+	g.communicator = mynet.NewTCPClient()
 
 	id := uuid.New().ID() //启动通信
 	g.PlayerId = id
@@ -50,7 +50,7 @@ func (g *Game) Init() error {
 func (g *Game) SetState(s State) error {
 	if g.state != nil {
 		//清空游戏状态
-		if err := s.Dispose(); err != nil {
+		if err := g.state.Dispose(); err != nil {
 			panic(err)
 		}
 	}

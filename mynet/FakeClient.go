@@ -25,7 +25,7 @@ func (f *FakeClient) SendMessage(operation data.Operation) {
 	case data.JOIN_ROOM:
 		f.receivedChan <- data.Operation{
 			OperationType: data.JOIN_SUCCESS,
-			Player:        make([]data.Player, 4),
+			Players:       make([]data.Player, 4),
 			PlayerId:      1,
 			RoomId:        1,
 		}

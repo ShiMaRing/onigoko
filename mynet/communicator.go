@@ -12,7 +12,7 @@ type Communicator interface {
 	sendMessage() error
 
 	// ReceiveMessage 持续接受消息并且通过chan传递给render
-	receiveMessage() error
+	ReceiveMessage() error
 
 	// Run 持续发送消息以及接收消息
 	Run() error

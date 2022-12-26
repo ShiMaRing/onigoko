@@ -6,7 +6,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"image/color"
 	"onigoko/data"
-	"time"
 )
 
 // RoomState 进入房间状态
@@ -34,22 +33,7 @@ func (r *RoomState) Init() error {
 	communicator := r.game.communicator
 	communicator.SendMessage(operation)
 	r.receivedMessage = communicator.ReceivedMessage()
-
-	tick := time.NewTicker(2 * time.Second)
 	r.ctx, r.cancelFunc = context.WithCancel(context.Background())
-	go func() {
-		for true {
-			select {
-			case <-tick.C:
-				op := data.Operation{}
-				op.OperationType = data.HEART_BEAT
-				op.PlayerId = r.game.PlayerId
-			case <-r.ctx.Done():
-				tick.Stop()
-				return
-			}
-		}
-	}()
 	x := ScreenWidth / 2
 	y := int(float64(ScreenHeight)/3) + 40
 	goBackButton := data.NewButton(
@@ -73,7 +57,8 @@ func (r *RoomState) Dispose() error {
 	//发送退出消息
 	op := data.Operation{}
 	op.OperationType = data.LEAVE_ROOM //离开房间
-	op.RoomId = r.roomId               //发送房间号
+	op.PlayerId = r.game.PlayerId
+	op.RoomId = r.roomId //发送房间号
 	r.game.communicator.SendMessage(op)
 	r.cancelFunc()
 	return nil
@@ -92,16 +77,16 @@ func (r *RoomState) Update() error {
 			//游戏开始前准备
 			playState := PlayState{}
 			playState.players = make(map[uint32]data.Player)
-			for i := range operation.Player {
-				playState.players[operation.Player[i].Id] = operation.Player[i]
+			for i := range operation.Players {
+				playState.players[operation.Players[i].Id] = operation.Players[i]
 			}
 			playState.playerId = r.game.PlayerId
-			playState.roomId = r.roomId
+			playState.roomId = operation.RoomId //可能是最后加入的，直接游戏开始
 			//初始化
-			playState.initWorld = operation.Blocks
-			r.game.SetState(&PlayState{
-				game: r.game,
-			})
+			playState.initWorld = make([]data.Block, len(operation.Blocks))
+			copy(playState.initWorld, operation.Blocks)
+			playState.game = r.game
+			r.game.SetState(&playState)
 		case data.JOIN_ROOM:
 			//玩家加入
 			r.currentPlayerNumber++
@@ -110,7 +95,9 @@ func (r *RoomState) Update() error {
 			r.currentPlayerNumber--
 		case data.JOIN_SUCCESS:
 			r.roomId = operation.RoomId
-			r.currentPlayerNumber = len(operation.Player)
+			r.currentPlayerNumber = len(operation.Players)
+			//输出日志,当前人数
+			fmt.Println("join success，current user count: ", r.currentPlayerNumber)
 		case data.JOIN_FAIL:
 			//退出失败，暂时不管
 			r.game.SetState(&MenuState{
