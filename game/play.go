@@ -17,6 +17,8 @@ type Piece struct {
 	image *data.CustomImage //内部维护的图
 }
 
+//还差点灯和游戏结束
+
 type PlayState struct {
 	game       *Game
 	roomId     int                    //房间id号
@@ -33,14 +35,7 @@ type PlayState struct {
 	threshold  int
 	notify     []string //通知，显示系统的消息
 	stateInfo  []string //状态信息，显示所有的玩家状态,只有玩家有 格式
-} // Light: 3  (press Q)
-// Trap:  1  (press E)
-
-// P1:Alive  <-you
-// P2:Dead
-// P3:Escaped
-
-// P1 is killed by Ghost
+}
 
 func (p *PlayState) Init() error {
 	//初始化,心跳发送
@@ -71,8 +66,8 @@ func (p *PlayState) Init() error {
 	//根据玩家身份确定是否需要显示状态信息
 	p.stateInfo = append(p.stateInfo, fmt.Sprintf("You Are %s", strings.ToTitle(player.NickName)))
 	if player.Identity == data.HUMAN {
-		p.stateInfo = append(p.stateInfo, "Light: 3  (press Q)")
-		p.stateInfo = append(p.stateInfo, "Trap:  1  (press E)")
+		p.stateInfo = append(p.stateInfo, "Light: 3  (press E)")
+		p.stateInfo = append(p.stateInfo, "Trap:  1  (press Q)")
 		p.stateInfo = append(p.stateInfo, "")
 	}
 	p.stateInfo = append(p.stateInfo, "P1: Alive")
@@ -239,29 +234,48 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 	//渲染三部分，当前玩家状态栏，剩余照明次数，存活状态，游戏地图，各个玩家位置状态
 	//绘制地图,视野外的地方需要填充为黑暗，暂时不需要实现
 	playerLocal := p.players[p.playerId]
+	postionX := playerLocal.X
+	postionY := playerLocal.Y
 	roadImage := data.GetImageByName("road")
 	for i := range p.graph {
 		for j := range p.graph[i] {
 			//绘制图块
 			customImage := p.graph[i][j].image
 			block := p.graph[i][j].block
+			//鬼的视野是周围4格子
+			//人的视野是周围2格子
+			//超出视野的地方需要填充为黑暗
 			x := float64(j) * data.PIXEL
 			y := float64(i) * data.PIXEL
 			//不应该直接修改指针指向的地址
 			option := customImage.Option
 			option.GeoM.Translate(x, y)
-			//如果当前玩家为鬼的话，不绘制地雷
+
+			//在这里判断是否在视野内,鬼是4格，人是2格，人如果在照明则无视状态
+			if playerLocal.Identity == data.GHOST {
+				if !(abs(i, postionX) <= 4 && abs(j, postionY) <= 4) {
+					//不在视野内,绘制黑暗
+					option.ColorM.Scale(0, 0, 0, 1)
+				}
+			} else if playerLocal.Identity == data.HUMAN && !playerLocal.IsLighting {
+				if !(abs(i, postionX) <= 2 && abs(j, postionY) <= 2) {
+					//不在视野内,绘制黑暗
+					option.ColorM.Scale(0, 0, 0, 1)
+				}
+			}
+
+			//如果当前玩家为鬼的话，不绘制地雷,只画路
 			if playerLocal.Identity == data.GHOST && p.graph[i][j].block.BlockType == data.MINE {
-				op := roadImage.Option
-				op.GeoM.Translate(x, y)
-				screen.DrawImage(roadImage.Image, &op)
+				screen.DrawImage(roadImage.Image, &option)
+				continue
 			}
+
 			if block.BlockType == data.KEY || block.BlockType == data.MINE {
-				op := roadImage.Option
-				op.GeoM.Translate(x, y)
-				screen.DrawImage(roadImage.Image, &op)
+				screen.DrawImage(roadImage.Image, &option)
 			}
+
 			screen.DrawImage(customImage.Image, &option)
+
 		}
 	}
 	//绘制玩家,根据玩家的nickName 选择玩家image
@@ -270,16 +284,37 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 			continue //不需要绘制
 		}
 		//检查玩家状态,玩家可以直接修改指针，因为要复用
+
 		customImage := data.GetImageByName(player.NickName)
 		option := customImage.Option
+
+		if playerLocal.Identity == data.GHOST {
+			if !(abs(player.X, postionX) <= 4 && abs(player.Y, postionY) <= 4) {
+				//不在视野内,并且不在照明
+				if !player.IsLighting {
+					option.ColorM.Scale(0, 0, 0, 1)
+				}
+			}
+		} else if playerLocal.Identity == data.HUMAN {
+			if !(abs(player.X, postionX) <= 2 && abs(player.Y, postionY) <= 2) && !playerLocal.IsLighting {
+				//不在视野内,绘制黑暗
+				option.ColorM.Scale(0, 0, 0, 1)
+			}
+		}
+
 		option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
+
 		screen.DrawImage(customImage.Image, &option)
+
+		//需要选择是否覆盖黑暗,如果玩家点灯并且当前玩家是鬼，则可以察觉到
 		//检查是否需要套笼子
 		if player.Identity == data.GHOST && player.IsDizziness {
 			cageImage := data.GetImageByName("cage")
 			cageImage.Option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
+			cageImage.Option.ColorM = option.ColorM
 			screen.DrawImage(cageImage.Image, &cageImage.Option)
 		}
+
 	}
 	var x = data.GraphWith*int(data.PIXEL) + 10
 	var y = 30
@@ -308,6 +343,12 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 		y += 25
 	}
 }
+func abs(a, b int) int {
+	if a > b {
+		return a - b
+	}
+	return b - a
+}
 
 //UpdateOther	 这里做一些清理或者辅助工作
 func (p *PlayState) UpdateOther(message data.Operation) {
@@ -334,8 +375,8 @@ func (p *PlayState) UpdateOther(message data.Operation) {
 		tmp := message.Players[i]
 		if tmp.Id == p.playerId && player.Identity == data.HUMAN {
 			//需要更新一下Light 和 Trap
-			p.stateInfo[1] = fmt.Sprintf("Light: %d  (press Q)", tmp.Lights)
-			p.stateInfo[2] = fmt.Sprintf("Trap:  %d  (press E)", tmp.Mines)
+			p.stateInfo[1] = fmt.Sprintf("Light: %d  (press E)", tmp.Lights)
+			p.stateInfo[2] = fmt.Sprintf("Trap:  %d  (press Q)", tmp.Mines)
 			break
 		}
 	}

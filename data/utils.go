@@ -52,6 +52,8 @@ func generateImage(imageName string) *CustomImage {
 		buf = p2
 	case "p3":
 		buf = p3
+	case "dark":
+		buf = dark
 	}
 	img, err := png.Decode(bytes.NewReader(buf))
 	if err != nil {

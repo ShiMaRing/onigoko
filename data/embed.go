@@ -31,3 +31,6 @@ var p2 []byte
 
 //go:embed  static/p3.png
 var p3 []byte
+
+//go:embed  static/dark.png
+var dark []byte
