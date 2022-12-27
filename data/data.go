@@ -69,7 +69,7 @@ func LoadData() error {
 	}
 	if NormalFace, err = opentype.NewFace(tt, &opentype.FaceOptions{
 		Size:    32,
-		DPI:     72,
+		DPI:     100,
 		Hinting: font.HintingFull,
 	}); err != nil {
 		return err
@@ -84,7 +84,7 @@ func LoadData() error {
 	}
 	if BoldFace, err = opentype.NewFace(tt, &opentype.FaceOptions{
 		Size:    24,
-		DPI:     45,
+		DPI:     72,
 		Hinting: font.HintingFull,
 	}); err != nil {
 		return err

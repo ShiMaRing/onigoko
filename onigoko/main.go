@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/thought-machine/go-flags"
 	"log"
+	"onigoko/data"
 	"onigoko/game"
 	"os"
 )
@@ -28,4 +30,9 @@ func main() {
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatalln(err)
 	}
+}
+func main_1() {
+	op := data.Operation{PlayerId: 12215, RoomId: 0, OperationType: 51}
+	marshal, _ := json.Marshal(op)
+	fmt.Println(string(marshal))
 }

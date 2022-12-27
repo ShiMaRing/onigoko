@@ -2,8 +2,11 @@ package mynet
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"onigoko/data"
@@ -35,21 +38,14 @@ func (t *TCPClient) SendMessage(operation data.Operation) {
 
 func (t *TCPClient) sendMessage() error {
 	operation := <-t.toSend
-	fmt.Println("发送消息：", operation)
 	bytes, err := json.Marshal(operation)
 	if err != nil {
 		log.Fatalln("Marshal", err)
 		return err
 	}
-	var count int
-	for count < len(bytes) {
-		nn, err := t.bufWriter.Write(bytes)
-		if err != nil {
-			return err
-		}
-		count += nn
-	}
-	err = t.bufWriter.Flush()
+	println("发送消息：", string(bytes))
+	println("发送消息大小：", len(bytes))
+	t.conn.Write(bytes)
 	return err
 }
 
@@ -57,22 +53,26 @@ func (t *TCPClient) ReceiveMessage() error {
 	//接收消息
 	//log here
 	var err error
-	buf := make([]byte, 1024)
-	result := make([]byte, 0)
-	var count = 0
-	for true {
-		n, _ := t.conn.Read(buf)
-		result = append(result, buf[:n]...)
-		count += n
-		if n < 1024 {
-			break
+	//首先读取消息头
+	header := make([]byte, 4)
+	_, _ = t.conn.Read(header)
+	messageSize := binary.BigEndian.Uint32(header)
+	fmt.Println("接收消息大小：", messageSize)
+	//根据消息头的大小，读取消息体
+	message := make([]byte, messageSize)
+	//循环读取，直到读取到足够的字节
+	var count int
+	for count < int(messageSize) {
+		n, err := t.conn.Read(message[count:])
+		if err != nil && !errors.As(err, &io.EOF) {
+			return err
 		}
+		count += n
 	}
 	//log here
-	fmt.Println("接收到的消息：", string(result))
+	fmt.Println("接收到的消息：", string(message))
 	var op data.Operation
-	err = json.Unmarshal(result[:count], &op)
-
+	err = json.Unmarshal(message, &op)
 	if err != nil {
 		log.Fatalln("Unmarshal", err)
 	}
