@@ -275,13 +275,13 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 
 			//在这里判断是否在视野内,鬼是4格，人是2格，人如果在照明则无视状态
 			if playerLocal.Identity == data.GHOST {
-				if !(abs(i, postionX) <= 6 && abs(j, postionY) <= 6) {
+				if !(abs(i, postionX) <= data.GHOST_VIEW && abs(j, postionY) <= data.GHOST_VIEW) {
 					//不在视野内,绘制黑暗
 					option.ColorM.Scale(0, 0, 0, 1)
 					roadOption.ColorM.Scale(0, 0, 0, 1)
 				}
 			} else if playerLocal.Identity == data.HUMAN && !playerLocal.IsLighting {
-				if !(abs(i, postionX) <= 3 && abs(j, postionY) <= 3) {
+				if !(abs(i, postionX) <= data.HUMAN_VIEW && abs(j, postionY) <= data.HUMAN_VIEW) {
 					//不在视野内,绘制黑暗
 					option.ColorM.Scale(0, 0, 0, 1)
 					roadOption.ColorM.Scale(0, 0, 0, 1)
@@ -311,14 +311,14 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 		option := customImage.Option
 
 		if playerLocal.Identity == data.GHOST {
-			if !(abs(player.X, postionX) <= 6 && abs(player.Y, postionY) <= 6) {
+			if !(abs(player.X, postionX) <= data.GHOST_VIEW && abs(player.Y, postionY) <= data.GHOST_VIEW) {
 				//不在视野内,并且不在照明
 				if !player.IsLighting {
 					option.ColorM.Scale(0, 0, 0, 1)
 				}
 			}
 		} else if playerLocal.Identity == data.HUMAN {
-			if !(abs(player.X, postionX) <= 3 && abs(player.Y, postionY) <= 3) && !playerLocal.IsLighting {
+			if !(abs(player.X, postionX) <= data.HUMAN_VIEW && abs(player.Y, postionY) <= data.HUMAN_VIEW) && !playerLocal.IsLighting {
 				//不在视野内,绘制黑暗
 				option.ColorM.Scale(0, 0, 0, 1)
 			}

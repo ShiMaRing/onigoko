@@ -27,7 +27,7 @@ func (g *Game) Init() error {
 	data.LoadData()
 	ebiten.SetScreenFilterEnabled(false)
 	ebiten.SetWindowSize(data.GraphWith*int(data.PIXEL)+40, data.GraphHeight*int(data.PIXEL)+40)
-	ebiten.SetWindowTitle("Onigoko  ——created by Gaosong Xu")
+	ebiten.SetWindowTitle("Onigoko  ——created by XuGaosong ")
 	//构建通信器，使用接口，协助mock测试
 	g.communicator = mynet.NewTCPClient()
 

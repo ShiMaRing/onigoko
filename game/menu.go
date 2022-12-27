@@ -94,12 +94,12 @@ func (s *MenuState) Draw(screen *ebiten.Image) {
 		true,
 	)
 
-	// Draw our real title.
-	top := &ebiten.DrawImageOptions{}
-	top.GeoM.Scale(0.4, 0.4)
-	top.GeoM.Translate(float64(ScreenWidth/2-s.titleImage.Bounds().Dx()/5), 16)
-	screen.DrawImage(s.titleImage, top)
-
+	/*	// Draw our real title.
+		top := &ebiten.DrawImageOptions{}
+		top.GeoM.Scale(0.4, 0.4)
+		top.GeoM.Translate(float64(ScreenWidth/2-s.titleImage.Bounds().Dx()/5), 16)
+		screen.DrawImage(s.titleImage, top)
+	*/
 	// Draw game buttons
 	for _, button := range s.buttons {
 		button.Draw(screen, &ebiten.DrawImageOptions{})

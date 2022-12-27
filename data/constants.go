@@ -14,10 +14,13 @@ const DEAD = 10
 
 const initLighting = 3
 const initMines = 1
-const GraphWith = 67
-const GraphHeight = 37
+const GraphWith = 43
+const GraphHeight = 21
 const ALL_KEYS_NUM = 6
 const NEEDED_FOUND_KEYS = 4
+
+const GHOST_VIEW = 12
+const HUMAN_VIEW = 8
 
 const UP = 1001
 const DOWN = 1002
