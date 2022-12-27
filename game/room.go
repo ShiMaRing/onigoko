@@ -43,7 +43,7 @@ func (r *RoomState) Init() error {
 		func() {
 			r.game.SetState(&MenuState{
 				game: r.game,
-			})
+			}, true)
 		},
 	)
 	goBackButton.Hover = true
@@ -54,7 +54,12 @@ func (r *RoomState) Init() error {
 }
 
 func (r *RoomState) Dispose() error {
-	r.cancelFunc()
+	//发送消息，离开房间
+	operation := data.Operation{}
+	operation.OperationType = data.LEAVE_ROOM
+	operation.PlayerId = r.game.PlayerId
+	operation.RoomId = r.roomId
+	r.game.communicator.SendMessage(operation)
 	return nil
 }
 
@@ -80,7 +85,7 @@ func (r *RoomState) Update() error {
 			playState.initWorld = make([]data.Block, len(operation.Blocks))
 			copy(playState.initWorld, operation.Blocks)
 			playState.game = r.game
-			r.game.SetState(&playState)
+			r.game.SetState(&playState, false)
 		case data.JOIN_ROOM:
 			//玩家加入
 			r.currentPlayerNumber++
@@ -96,7 +101,7 @@ func (r *RoomState) Update() error {
 			//退出失败，暂时不管
 			r.game.SetState(&MenuState{
 				game: r.game,
-			})
+			}, true)
 		}
 	default:
 		return nil

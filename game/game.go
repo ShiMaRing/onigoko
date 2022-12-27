@@ -41,14 +41,14 @@ func (g *Game) Init() error {
 
 	if err := g.SetState(&MenuState{
 		game: g,
-	}); err != nil {
+	}, true); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (g *Game) SetState(s State) error {
-	if g.state != nil {
+func (g *Game) SetState(s State, isDispose bool) error {
+	if g.state != nil && isDispose {
 		//清空游戏状态
 		if err := g.state.Dispose(); err != nil {
 			panic(err)

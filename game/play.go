@@ -66,7 +66,7 @@ func (p *PlayState) Init() error {
 	//根据玩家身份确定是否需要显示状态信息
 	p.stateInfo = append(p.stateInfo, fmt.Sprintf("You Are %s", strings.ToTitle(player.NickName)))
 	if player.Identity == data.HUMAN {
-		p.stateInfo = append(p.stateInfo, "Light: 3  (press E)")
+		p.stateInfo = append(p.stateInfo, "Light: 2  (press E)")
 		p.stateInfo = append(p.stateInfo, "Trap:  1  (press Q)")
 		p.stateInfo = append(p.stateInfo, "")
 	}

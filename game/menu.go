@@ -43,7 +43,7 @@ func (s *MenuState) Init() error {
 		func() {
 			s.game.SetState(&RoomState{
 				game: s.game,
-			})
+			}, true)
 		},
 	)
 	startGameButton.Hover = true
