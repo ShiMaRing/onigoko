@@ -59,9 +59,9 @@ func (p *PlayState) Init() error {
 	p.received = p.game.communicator.ReceivedMessage()
 	player := p.players[p.playerId]
 	if player.Identity == data.GHOST {
-		p.threshold = 15
+		p.threshold = 10
 	} else {
-		p.threshold = 20
+		p.threshold = 15
 	}
 	//初始化信息列表
 	p.stateInfo = make([]string, 0)
@@ -132,6 +132,11 @@ func (p *PlayState) isOperationAvailable(key ebiten.Key) bool {
 	if player.IsEscaped || player.IsDead || player.IsDizziness {
 		return false
 	}
+	//不允许重复触发
+	if key == ebiten.KeyE && player.IsLighting {
+		return false
+	}
+
 	switch key {
 	case ebiten.KeyW, ebiten.KeyA, ebiten.KeyS, ebiten.KeyD:
 		return true
@@ -261,34 +266,38 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 			x := float64(j) * data.PIXEL
 			y := float64(i) * data.PIXEL
 			//不应该直接修改指针指向的地址
+
 			option := customImage.Option
+			roadOption := roadImage.Option
+
+			roadOption.GeoM.Translate(x, y)
 			option.GeoM.Translate(x, y)
 
 			//在这里判断是否在视野内,鬼是4格，人是2格，人如果在照明则无视状态
 			if playerLocal.Identity == data.GHOST {
-				if !(abs(i, postionX) <= 4 && abs(j, postionY) <= 4) {
+				if !(abs(i, postionX) <= 6 && abs(j, postionY) <= 6) {
 					//不在视野内,绘制黑暗
 					option.ColorM.Scale(0, 0, 0, 1)
+					roadOption.ColorM.Scale(0, 0, 0, 1)
 				}
 			} else if playerLocal.Identity == data.HUMAN && !playerLocal.IsLighting {
-				if !(abs(i, postionX) <= 2 && abs(j, postionY) <= 2) {
+				if !(abs(i, postionX) <= 3 && abs(j, postionY) <= 3) {
 					//不在视野内,绘制黑暗
 					option.ColorM.Scale(0, 0, 0, 1)
+					roadOption.ColorM.Scale(0, 0, 0, 1)
 				}
-			}
-
-			//如果当前玩家为鬼的话，不绘制地雷,只画路
-			if playerLocal.Identity == data.GHOST && p.graph[i][j].block.BlockType == data.MINE {
-				screen.DrawImage(roadImage.Image, &option)
-				continue
 			}
 
 			if block.BlockType == data.KEY || block.BlockType == data.MINE {
-				screen.DrawImage(roadImage.Image, &option)
+				screen.DrawImage(roadImage.Image, &roadOption)
 			}
 
 			screen.DrawImage(customImage.Image, &option)
 
+			//如果当前玩家为鬼的话，不绘制地雷,只画路
+			if playerLocal.Identity == data.GHOST && p.graph[i][j].block.BlockType == data.MINE {
+				screen.DrawImage(roadImage.Image, &option)
+			}
 		}
 	}
 	//绘制玩家,根据玩家的nickName 选择玩家image
@@ -302,14 +311,14 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 		option := customImage.Option
 
 		if playerLocal.Identity == data.GHOST {
-			if !(abs(player.X, postionX) <= 4 && abs(player.Y, postionY) <= 4) {
+			if !(abs(player.X, postionX) <= 6 && abs(player.Y, postionY) <= 6) {
 				//不在视野内,并且不在照明
 				if !player.IsLighting {
 					option.ColorM.Scale(0, 0, 0, 1)
 				}
 			}
 		} else if playerLocal.Identity == data.HUMAN {
-			if !(abs(player.X, postionX) <= 2 && abs(player.Y, postionY) <= 2) && !playerLocal.IsLighting {
+			if !(abs(player.X, postionX) <= 3 && abs(player.Y, postionY) <= 3) && !playerLocal.IsLighting {
 				//不在视野内,绘制黑暗
 				option.ColorM.Scale(0, 0, 0, 1)
 			}
@@ -323,11 +332,11 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 		//检查是否需要套笼子
 		if player.Identity == data.GHOST && player.IsDizziness {
 			cageImage := data.GetImageByName("cage")
-			cageImage.Option.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
-			cageImage.Option.ColorM = option.ColorM
-			screen.DrawImage(cageImage.Image, &cageImage.Option)
+			op := cageImage.Option
+			op.GeoM.Translate(data.PIXEL*float64(player.Y), data.PIXEL*float64(player.X))
+			op.ColorM = option.ColorM
+			screen.DrawImage(cageImage.Image, &op)
 		}
-
 	}
 	var x = data.GraphWith*int(data.PIXEL) + 10
 	var y = 30
