@@ -84,7 +84,7 @@ func LoadData() error {
 	}
 	if BoldFace, err = opentype.NewFace(tt, &opentype.FaceOptions{
 		Size:    24,
-		DPI:     72,
+		DPI:     45,
 		Hinting: font.HintingFull,
 	}); err != nil {
 		return err

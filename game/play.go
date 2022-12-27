@@ -35,6 +35,8 @@ type PlayState struct {
 	threshold  int
 	notify     []string //通知，显示系统的消息
 	stateInfo  []string //状态信息，显示所有的玩家状态,只有玩家有 格式
+	isGameEnd  bool     //游戏是否结束,需要退出游戏
+	endMessage string   //游戏结束的消息
 }
 
 func (p *PlayState) Init() error {
@@ -117,6 +119,7 @@ func (p *PlayState) Dispose() error {
 	op := data.Operation{}
 	op.OperationType = data.LEAVE_ROOM //离开房间
 	op.RoomId = p.roomId               //发送房间号
+	op.PlayerId = p.playerId           //发送玩家id
 	p.game.communicator.SendMessage(op)
 	p.cancelFunc()
 	return nil
@@ -145,6 +148,9 @@ func (p *PlayState) isOperationAvailable(key ebiten.Key) bool {
 
 func (p *PlayState) Update() error {
 	//接收用户输入，更新视图
+	if p.isGameEnd { //游戏结束不再接收更新
+		return nil
+	}
 	p.count++
 	communicator := p.game.communicator
 	//处理移动
@@ -213,6 +219,13 @@ func (p *PlayState) Update() error {
 			p.UpdateWorldBlocks(message.Blocks)
 			p.UpdateOther(message)
 		case data.GAME_END:
+			p.isGameEnd = true
+			p.endMessage = message.Message
+			//三秒后返回主菜单
+			go func() {
+				time.Sleep(3 * time.Second)
+				p.game.SetState(&MenuState{game: p.game}, true)
+			}()
 			//游戏结束，弹窗，退出游戏，暂时不需要实现
 		}
 	default:
@@ -341,6 +354,19 @@ func (p *PlayState) Draw(screen *ebiten.Image) {
 			false,
 		)
 		y += 25
+	}
+	//判断游戏是否结束，选择绘制最终的结果
+	if p.isGameEnd {
+		//绘制最终结果
+		data.DrawStaticText(
+			p.endMessage,
+			data.NormalFace,
+			data.GraphWith*int(data.PIXEL)/2,
+			data.GraphHeight*int(data.PIXEL)/2,
+			color.White,
+			screen,
+			true,
+		)
 	}
 }
 func abs(a, b int) int {
